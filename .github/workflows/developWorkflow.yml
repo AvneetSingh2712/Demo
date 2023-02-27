@@ -27,12 +27,25 @@ jobs:
       - name: Install NDK
         run: echo "y" | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install 'ndk;21.1.6352462'
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
+  apk:
+    name: Generate APK
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Setup JDK
+        uses: actions/setup-java@v1
         with:
-          name: release-apk
-          path: build/app/outputs/apk/release/app-release.apk
-
+          java-version: 1.8
+      - name: Build APK
+        run: bash ./gradlew assembleDebug --stacktrace
+      - name: Upload APK
+        uses: actions/upload-artifact@v1
+        with:
+          name: apk
+          path: app/build/outputs/apk/debug/app-debug.apk 
+        
       - name: Post to a Slack channel
         id: slack
         uses: slackapi/slack-github-action@v1.23.0
@@ -45,13 +58,15 @@ jobs:
           slack-message: "GitHub build result: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          
       - name: Upload to slack step - apk
         uses: MeilCli/slack-upload-file@v3
         with:
           slack_token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel_id: "C02PBPERW8N"
           file_path: "build/app/outputs/apk/release/app-release.apk"
-          initial_comment: "release file"
+          initial_comment: "build file"
+          
       - name: Upload to slack step - change log
         uses: MeilCli/slack-upload-file@v3
         with:
